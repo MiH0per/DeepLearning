@@ -74,6 +74,8 @@ There is about 1.1 car per image, so most images show one car.
 
 figures/ground_truth_examples.png shows 6 random training images with their ground-truth boxes. Most boxes fit the cars and have the correct team. One missing label was found: in the first image a Red Bull car next to a Mercedes has no box. So the dataset contains some missing annotations, which can make measured precision lower than the real one.
 
+The failure analysis on the test set found two wrong class labels: in _0_4120 a Red Bull car is labeled Mclaren, and in _0_9497 a Ferrari car is labeled Redbull. In both images the model predicts the correct team, but the evaluation counts these predictions as wrong classes.
+
 ![Ground truth examples](figures/ground_truth_examples.png)
 
 ## Baseline
@@ -97,7 +99,7 @@ The pretrained COCO model has 80 classes. Ultralytics keeps all pretrained weigh
 
 Baseline on the validation set:
 
-| Class | Images | Objects | Precision | Recall | mAP@0.50 | mAP@0.50:0.95 |
+| Class | Images | Objects | Precision | Recall | `mAP@0.50` | `mAP@0.50:0.95` |
 |---|---|---|---|---|---|---|
 | all | 250 | 275 | 0.980 | 0.954 | 0.971 | 0.772 |
 | Ferrari | 63 | 66 | 0.967 | 0.924 | 0.971 | 0.806 |
@@ -105,21 +107,21 @@ Baseline on the validation set:
 | Mercedes | 76 | 81 | 0.968 | 0.963 | 0.961 | 0.729 |
 | Redbull | 67 | 68 | 1.000 | 0.946 | 0.960 | 0.750 |
 
-The comparison table below re-evaluates the same checkpoint and gives mAP@0.50:0.95 0.771 instead of 0.772. Such differences in the third decimal come from rounding and evaluation details.
+The comparison table below re-evaluates the same checkpoint and gives `mAP@0.50:0.95` 0.771 instead of 0.772. Such differences in the third decimal come from rounding and evaluation details.
 
 ![Baseline learning curves](results/baseline/results.png)
 
-Losses go down during training and validation mAP@0.50:0.95 is still rising at the last epoch, so there is no sign of overfitting. Validation metrics jump in the first epochs because the learning rate is high and the validation set is small. Losses and the number of objects per batch drop at epoch 21, because mosaic augmentation, which joins 4 images into one, is turned off for the last 10 epochs.
+Losses go down during training and validation `mAP@0.50:0.95` is still rising at the last epoch, so there is no sign of overfitting. Validation metrics jump in the first epochs because the learning rate is high and the validation set is small. Losses and the number of objects per batch drop at epoch 21, because mosaic augmentation, which joins 4 images into one, is turned off for the last 10 epochs.
 
 ## Controlled experiment
 
 One intentional change: image size 320 instead of 640. The data split, starting checkpoint yolov8n.pt, seed, epochs, batch size, optimizer and learning rate stay the same. The second model is created again from yolov8n.pt, so both runs start from the same weights.
 
-Hypothesis, written before the run: with image size 320 training and inference will be faster, because each image has 4 times fewer pixels. Accuracy will drop, mostly in mAP@0.50:0.95, because boxes become less precise and small or distant cars lose detail. mAP@0.50 may change less, because the baseline is already close to its maximum.
+Hypothesis, written before the run: with image size 320 training and inference will be faster, because each image has 4 times fewer pixels. Accuracy will drop, mostly in `mAP@0.50:0.95`, because boxes become less precise and small or distant cars lose detail. `mAP@0.50` may change less, because the baseline is already close to its maximum.
 
 Comparison on the validation set:
 
-| Run | Changed setting | Precision | Recall | mAP@0.50 | mAP@0.50:0.95 | Training time | Inference per image | GPU memory |
+| Run | Changed setting | Precision | Recall | `mAP@0.50` | `mAP@0.50:0.95` | Training time | Inference per image | GPU memory |
 |---|---|---|---|---|---|---|---|---|
 | baseline | imgsz 640 | 0.980 | 0.954 | 0.971 | 0.771 | 8.3 min | about 2.6 ms | 2.51 GB |
 | experiment | imgsz 320 | 0.974 | 0.942 | 0.967 | 0.779 | 4.8 min | about 1.3 ms | 0.73 GB |
@@ -129,17 +131,17 @@ Inference times are taken from the final validation after training and change sl
 Result: the hypothesis was confirmed for speed and not confirmed for accuracy.
 
 - Speed: training was 1.7 times faster, inference about 2 times faster and GPU memory 3.4 times smaller. The speedup is smaller than 4 times, because data loading, augmentation on the CPU and validation after each epoch depend little on image size.
-- Accuracy: precision, recall and mAP@0.50 dropped by 0.006, 0.012 and 0.004, and mAP@0.50:0.95 increased by 0.008. These differences are within noise: with 275 validation objects one missed car changes recall by about 0.004. Cars in this dataset are usually large, so 320 pixels keep enough detail, and many source photos were small web images stretched to 640.
+- Accuracy: precision, recall and `mAP@0.50` dropped by 0.006, 0.012 and 0.004, and `mAP@0.50:0.95` increased by 0.008. These differences are within noise: with 275 validation objects one missed car changes recall by about 0.004. Cars in this dataset are usually large, so 320 pixels keep enough detail, and many source photos were small web images stretched to 640.
 
-Final model selection rule, decided on validation only: the run with the higher validation mAP@0.50. The baseline with image size 640 is selected. If speed were more important, image size 320 would be a reasonable choice.
+Final model selection rule, decided on validation only: the run with the higher validation `mAP@0.50`. The baseline with image size 640 is selected. If speed were more important, image size 320 would be a reasonable choice.
 
 ## Test results
 
-The final model was evaluated once on the 250 test images. Test results were not used to change any setting.
+The final model was evaluated once on the 250 test images. Test results were not used to change any setting. All numbers in this README come from the recorded run. A new run of the notebook can differ slightly in the third decimal, because some GPU operations are not fully deterministic.
 
 Evaluation settings: confidence threshold 0.001, NMS IoU threshold 0.7, image size 640. For pictures with predictions we use confidence threshold 0.25.
 
-| Class | Images | Objects | Precision | Recall | mAP@0.50 | mAP@0.50:0.95 |
+| Class | Images | Objects | Precision | Recall | `mAP@0.50` | `mAP@0.50:0.95` |
 |---|---|---|---|---|---|---|
 | all | 250 | 277 | 0.969 | 0.951 | 0.969 | 0.758 |
 | Ferrari | 60 | 61 | 0.955 | 0.951 | 0.958 | 0.790 |
@@ -154,7 +156,7 @@ What the metrics measure:
 - Precision: the share of predicted boxes that are correct.
 - Recall: the share of ground-truth cars that were found.
 - mAP@0.50: for each class the area under the precision-recall curve at IoU 0.5, averaged over the 4 classes.
-- mAP@0.50:0.95: the same averaged over IoU thresholds from 0.5 to 0.95, so it also rewards precise boxes.
+- `mAP@0.50:0.95`: the same averaged over IoU thresholds from 0.5 to 0.95, so it also rewards precise boxes.
 - The confidence threshold 0.001 is low because mAP needs almost all predictions to build the full precision-recall curve. The NMS IoU threshold 0.7 only removes duplicate boxes of the same class and is different from the IoU 0.5 used for matching.
 
 Test and validation agree within about 0.01, so model selection on validation did not overfit to the validation set. Redbull and Mercedes are the weakest classes in box precision. Both cars are dark, which makes them easier to confuse and harder to box precisely. Mclaren is the easiest class because its orange colour is unique.
@@ -165,7 +167,7 @@ Predictions on 6 random test images:
 
 ## Failure analysis
 
-At confidence 0.25 the test set has 12 false detections, 3 wrong classes, 3 missed objects and 3 inaccurate boxes out of 277 objects. In the picture below solid green boxes are ground truth and dashed red boxes are predictions.
+At confidence 0.25 the test set has 12 false detections, 3 wrong classes, 3 missed objects and 3 inaccurate boxes out of 277 objects. Two of the 3 wrong classes are label errors, not model errors: _0_4120 shows a Red Bull car labeled Mclaren, and _0_9497 shows a Ferrari car labeled Redbull. The model predicts the correct team in both. All candidates are shown in figures/failure_candidates.png. In the picture below solid green boxes are ground truth and dashed red boxes are predictions.
 
 ![Failure cases](figures/failure_cases.png)
 
@@ -180,7 +182,7 @@ Case 3 - _0_8991, partly visible car. Only the rear of a Ferrari is visible at t
 - The validation and test sets are small, about 275 objects each, so differences below about 0.01 are not meaningful.
 - Near-duplicates inside one split were not removed, so a few photos may be counted twice in the same split.
 - Exact and near-exact duplicates were removed, but different photos of the same race, car or moment can still be in different splits. Some images in the original dataset are rotated, sheared or stretched copies made by the dataset author, and our hash does not detect rotated copies. Both can make test results too optimistic.
-- The dataset has some missing labels, so a correct prediction of an unlabeled car is counted as a false detection.
+- The dataset has some missing labels and some wrong class labels, so a correct prediction can be counted as a false detection or a wrong class. Real precision is probably slightly higher than measured.
 - Images with empty label files were excluded, so the model never trained on images without cars.
 - Images are stretched to 640 x 640, so car shapes are distorted.
 - Only 4 teams from the 2021 and 2022 seasons are labeled. Other teams are ignored and new car liveries may not be recognized.
@@ -197,7 +199,7 @@ Case 3 - _0_8991, partly visible car. Only the rear of a Ferrari is visible at t
 | results/baseline, results/exp_imgsz320 | Training configuration args.yaml, logs results.csv, learning curves and plots of both runs |
 | results/baseline_test | Test confusion matrix and plots |
 | results/comparison_val.csv | Experiment comparison table |
-| figures | Ground truth examples, test predictions, failure cases |
+| figures | Ground truth examples, test predictions, failure candidates and the three failure cases |
 
 Weights and the prepared dataset are stored in release v1.0, not in the repository files.
 
