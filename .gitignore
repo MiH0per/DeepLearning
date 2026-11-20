@@ -1,0 +1,8 @@
+# Weights and data are stored in the GitHub release, not in the repository
+*.pt
+*.zip
+f1_subset/
+detection f1 cars.v12i.yolov8/
+runs/
+*.cache
+.ipynb_checkpoints/

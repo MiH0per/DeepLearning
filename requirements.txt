@@ -1,0 +1,4 @@
+# Tested in Google Colab on a Tesla T4 with Python 3.13.16 and torch 2.14.1+cu130 preinstalled.
+ultralytics==8.4.216
+# Used by scripts/build_dataset.py when run locally
+pillow
